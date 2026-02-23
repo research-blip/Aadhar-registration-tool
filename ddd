@@ -1,0 +1,65 @@
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+
+  try {
+    Logger.log('==================== NEW REQUEST ====================');
+
+    // Add headers once
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "Sr.No",
+        "Name",
+        "Gender",
+        "DOB",
+        "Aadhaar Masked",
+        "Photo URL",
+        "Address",
+        "Visit Pass",
+        "Timestamp"
+      ]);
+    }
+
+    if (!e || !e.postData) {
+      Logger.log('❌ No POST data');
+      return ContentService.createTextOutput('No data');
+    }
+
+    const raw = e.postData.contents;
+    Logger.log('RAW: ' + raw);
+
+    let data = JSON.parse(raw);
+    Logger.log('PARSED → Name=' + data.name + ' | Address=' + data.address + ' | VisitPass=' + data.visitPass);
+
+    // Correct Sr.No
+    const newSrNo = sheet.getLastRow() + 1;
+
+    const rowData = [
+      newSrNo,
+      String(data.name || ''),
+      String(data.gender || ''),
+      String(data.dob || ''),
+      String(data.idNumber || ''),
+      String(data.photoUrl || ''),
+      String(data.address || ''),      // ← will now always come
+      String(data.visitPass || ''),    // ← will now always come
+      String(data.timestamp || new Date().toLocaleString('en-IN'))
+    ];
+
+    sheet.appendRow(rowData);
+
+    Logger.log('✓ SAVED ROW ' + newSrNo + ' | Address: ' + (data.address || '—') + ' | Visit Pass: ' + (data.visitPass || '—'));
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      row: newSrNo
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    Logger.log('ERROR: ' + err.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
